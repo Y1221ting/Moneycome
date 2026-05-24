@@ -1,0 +1,31 @@
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment secrets (real values, not templates)
+.env.local
+*.secret
+
+# Build output
+/front-end/dist/
+/bs-server/build/
+*.jar
+
+# Logs
+*.log
+/logs/
+
+# Docker volumes
+/mysql/data/
+/redis/
+/nginx/logs/
+
+# Temp
+*.tmp
+*.bak

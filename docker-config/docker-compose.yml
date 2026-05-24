@@ -1,5 +1,3 @@
-version: "1.0"
-
 networks:
   financial-ce:
     name: financial-ce
@@ -35,17 +33,31 @@ services:
       --collation-server=utf8mb4_general_ci
       --explicit_defaults_for_timestamp=true
       --lower_case_table_names=1
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     networks:
       financial-ce:
         ipv4_address: ${SUBNET_PREFIX}.2
 
   redis:
     image: redis:5.0.12
-    container_name: financial_redis8
+    container_name: financial_redis5
+    restart: always
     ports:
-      - 6479:6379
+      - "6479:6379"
     volumes:
       - ./redis:/data
+    command: redis-server --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD required} --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       financial-ce:
         ipv4_address: ${SUBNET_PREFIX}.3
@@ -60,9 +72,14 @@ services:
     volumes:
       - ./server/:/server/
       - ./logs/:/logs/
+    environment:
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     depends_on:
-      - mysql
-      - redis
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       financial-ce:
         ipv4_address: ${SUBNET_PREFIX}.5
@@ -71,12 +88,14 @@ services:
     container_name: financial_nginx
     image: nginx:1.25.2
     restart: always
-    networks:
-      financial-ce:
-        ipv4_address: ${SUBNET_PREFIX}.6
     ports:
       - "80:80"
     volumes:
-      - ./nginx/vhost:/etc/nginx/conf.d
+      - ./nginx/vhost:/etc/nginx/conf.d:ro
       - ./nginx/wwwroot:/usr/share/nginx/html:ro
       - ./nginx/logs:/var/log/nginx
+    depends_on:
+      - client
+    networks:
+      financial-ce:
+        ipv4_address: ${SUBNET_PREFIX}.6
