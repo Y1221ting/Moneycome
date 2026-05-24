@@ -1,0 +1,57 @@
+spring:
+  datasource:
+    url: jdbc:mysql://172.25.0.2:3306/financial?characterEncoding=UTF-8&useUnicode=true&useSSL=false&serverTimezone=GMT%2B8&allowMultiQueries=true
+    password: fenxiyun_root_2024
+    username: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+  redis:
+    database: 10
+    host: 172.25.0.3
+    port: 6379
+    timeout: 10s
+    lettuce:
+      pool:
+        max-active: 50
+        max-wait: -1ms
+        max-idle: 10
+        min-idle: 0
+
+logging:
+  level:
+    "cn.gson.financial.kernel.model.mapper": debug
+
+mybatis-plus:
+  type-aliases-package: cn.gson.financial.kernel.model.entity
+  configuration:
+    call-setters-on-nulls: true
+    map-underscore-to-camel-case: true
+  mapper-locations:
+    - classpath:/mappers/*Mapper.xml
+
+sa-token:
+  token-session-check-login: false
+  is-share: false
+  is-concurrent: true
+  token-name: fsatoken
+
+server:
+  port: 8012
+
+aliyun:
+  accessKeyId: ''
+  accessKeySecret: ''
+  sms:
+    signature: ''
+    template-code:
+      verification: ''
+      register: ''

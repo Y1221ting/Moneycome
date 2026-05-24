@@ -1,0 +1,82 @@
+version: "1.0"
+
+networks:
+  financial-ce:
+    name: financial-ce
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - gateway: ${SUBNET_PREFIX:?SUBNET_PREFIX required}.1
+          subnet: ${SUBNET_PREFIX}.0/24
+    driver_opts:
+      com.docker.network.bridge.name: financial-ce
+
+services:
+  mysql:
+    image: mysql:8.2.0
+    container_name: financial_mysql8
+    restart: always
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./mysql/data/:/var/lib/mysql/
+      - ./mysql/conf/:/etc/mysql/conf.d/
+      - ./mysql/init/:/docker-entrypoint-initdb.d/
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD required}
+      MYSQL_DATABASE: financial
+      MYSQL_USER: financial
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD required}
+    command:
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_general_ci
+      --explicit_defaults_for_timestamp=true
+      --lower_case_table_names=1
+    networks:
+      financial-ce:
+        ipv4_address: ${SUBNET_PREFIX}.2
+
+  redis:
+    image: redis:5.0.12
+    container_name: financial_redis8
+    ports:
+      - 6479:6379
+    volumes:
+      - ./redis:/data
+    networks:
+      financial-ce:
+        ipv4_address: ${SUBNET_PREFIX}.3
+
+  client:
+    container_name: financial_client
+    image: openjdk:8u102
+    restart: always
+    command: java -server -Xms256m -Xmx512m -Dlogging.path=/logs/client.log -Djava.security.egd=file:/dev/./urandom -jar /server/financial.jar --spring.config.location=file:/server/application.yml
+    ports:
+      - "8888:8012"
+    volumes:
+      - ./server/:/server/
+      - ./logs/:/logs/
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      financial-ce:
+        ipv4_address: ${SUBNET_PREFIX}.5
+
+  nginx:
+    container_name: financial_nginx
+    image: nginx:1.25.2
+    restart: always
+    networks:
+      financial-ce:
+        ipv4_address: ${SUBNET_PREFIX}.6
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/vhost:/etc/nginx/conf.d
+      - ./nginx/wwwroot:/usr/share/nginx/html:ro
+      - ./nginx/logs:/var/log/nginx
